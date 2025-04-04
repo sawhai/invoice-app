@@ -61,6 +61,7 @@ items = {
     "Curtain (ستارة)": 4.0
 }
 
+
 # Service options with multipliers
 service_options = {
     'wash': 1.0,
