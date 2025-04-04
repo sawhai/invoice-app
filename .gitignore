@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Environment variables
+.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
