@@ -1,82 +1,81 @@
+import os
 import io
 import re
-from flask import Flask, render_template, request, send_file
+import uuid
+from flask import Flask, render_template, request, send_file, redirect, url_for, flash
 from fpdf import FPDF
 import arabic_reshaper
 from bidi.algorithm import get_display
+from twilio.rest import Client
 
 app = Flask(__name__)
+app.secret_key = '2BNTHT4AE8J8T4ZXUCKLWRNQ'  # required for flash messages
+
+# --- Twilio Configuration ---
+TWILIO_ACCOUNT_SID = "ACb1b0a5619dbb2a7905d111187b5a6805"          # update this
+TWILIO_AUTH_TOKEN = "194718afc9d3ccb7caf3fff9755b9aa0"            # update this
+TWILIO_WHATSAPP_FROM = "+14155238886"     # your Twilio WhatsApp sender (sandbox)
+TO_WHATSAPP_NUMBER = "+96599965133"       # your number (in international format)
+
+# PUBLIC_URL_BASE must be the publicly accessible base URL for your app.
+PUBLIC_URL_BASE = "https://invoice-app-78jh.onrender.com"          # update this with your actual domain
+
+# Ensure invoices directory exists under the static folder.
+invoices_dir = os.path.join("static", "invoices")
+if not os.path.exists(invoices_dir):
+    os.makedirs(invoices_dir)
 
 # --- Helper Functions for Arabic Shaping ---
-
 def fix_arabic_text(text):
-    """
-    Reshape Arabic letters and apply bidi transformations so text
-    is displayed in the correct right-to-left form.
-    """
     reshaped = arabic_reshaper.reshape(text)
     return get_display(reshaped)
 
 def shape_arabic_in_parentheses(label):
-    """
-    Finds the text between parentheses in `label`, reshapes only that Arabic text,
-    and returns the combined string with the correct parentheses orientation.
-    For example, "Dish Wool (شماغ صوف)" becomes "Dish Wool (reshaped Arabic text)".
-    """
-    pattern = r'\(([^)]*)\)'  # capture text inside parentheses
-
+    pattern = r'\(([^)]*)\)'
     def replace_arabic(match):
         arabic_substring = match.group(1)
         shaped = fix_arabic_text(arabic_substring)
-        # Return the reshaped text enclosed in unchanged parentheses.
         return f"({shaped})"
-
     return re.sub(pattern, replace_arabic, label)
 
 # --- Items and Service Options ---
-
-# Items with both English and Arabic names and their base prices
 items = {
-    "Dish Wool (شماغ صوف)": 0.25,
-    "Dishd C (ثوب قطن)": 0.25,
-    "Gotra Red/White (شماغ)": 0.25,
-    "Cap (طاقية)": 0.15,
-    "Pajama (بيجامة)": 0.5,
-    "Vest (سديري)": 0.75,
-    "Underwear (ملابس داخلية)": 0.25,
-    "Army Suit (بدلة عسكرية)": 1.5,
-    "Shirt (قميص)": 1.0,
-    "Trousers (بنطلون)": 1.0,
-    "Jackets (جاكيت)": 1.25,
-    "Large Coat (بالطو)": 2.5,
-    "Ladies Dress (فستان حريمي)": 2.0,
-    "Abaya (عباية)": 1.75,
-    "Hezab (حجاب)": 0.5,
-    "Skirt (تنورة)": 0.75,
-    "Blouse (بلوزة)": 0.5,
-    "Bath Towel (منشفة حمام)": 0.5,
-    "Blanket/Dibaz (بطانية / دثار)": 3.5,
-    "Bed Sheet (شرشف سرير)": 2.5,
-    "Pillow Case (كيس مخدة)": 0.5,
-    "Curtain (ستارة)": 4.0
+    "Dish Wool (شماغ صوف)": 10.0,
+    "Dishd C (ثوب قطن)": 10.0,
+    "Gotra Red/White (شماغ)": 8.0,
+    "Cap (طاقية)": 5.0,
+    "Pajama (بيجامة)": 7.0,
+    "Vest (سديري)": 5.0,
+    "Underwear (ملابس داخلية)": 3.0,
+    "Army Suit (بدلة عسكرية)": 12.0,
+    "Shirt (قميص)": 5.0,
+    "Trousers (بنطلون)": 6.0,
+    "Jackets (جاكيت)": 8.0,
+    "Large Coat (بالطو)": 12.0,
+    "Ladies Dress (فستان حريمي)": 10.0,
+    "Abaya (عباية)": 10.0,
+    "Hezab (حجاب)": 3.0,
+    "Skirt (تنورة)": 5.0,
+    "Blouse (بلوزة)": 5.0,
+    "Bath Towel (منشفة حمام)": 4.0,
+    "Blanket/Dibaz (بطانية / دثار)": 15.0,
+    "Bed Sheet (شرشف سرير)": 8.0,
+    "Pillow Case (كيس مخدة)": 3.0,
+    "Curtain (ستارة)": 15.0
 }
 
-
-# Service options with multipliers
 service_options = {
     'wash': 1.0,
     'iron': 1.2,
     'wash_and_iron': 1.5,
 }
 
-# --- Flask Routes ---
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         order = {}
         total = 0
-        # Process each item from the form.
+        # Process form data
         for item_label, base_price in items.items():
             quantity = int(request.form.get(f'{item_label}_quantity', 0))
             comment = request.form.get(f'{item_label}_comment', '')
@@ -98,18 +97,11 @@ def index():
         # Create PDF invoice using fpdf2
         pdf = FPDF()
         pdf.add_page()
-
-        # Add an Arabic-capable font (Amiri-Regular.ttf must be in your project folder)
         pdf.add_font(fname="Amiri-Regular.ttf", family="Amiri", uni=True)
         pdf.set_font("Amiri", size=14)
-
-        # Title (English only; no reshaping needed)
         pdf.cell(0, 10, txt="Laundry Invoice", ln=True, align='C')
         pdf.ln(10)
-
-        # Add each order item to the PDF
         for label, details in order.items():
-            # Shape only the Arabic text inside parentheses in the label.
             shaped_label = shape_arabic_in_parentheses(label)
             line = (
                 f"{shaped_label}: {details['quantity']} x {details['final_price']:.2f} "
@@ -118,16 +110,30 @@ def index():
             )
             pdf.multi_cell(0, 10, txt=line)
             pdf.ln(2)
-
         pdf.cell(0, 10, txt=f"Total: {total:.2f}", ln=True)
-
-        # Output the PDF as a downloadable file.
         pdf_bytes = pdf.output(dest="S")
-        pdf_file = io.BytesIO(pdf_bytes)
-        pdf_file.seek(0)
-        return send_file(pdf_file, download_name="invoice.pdf", as_attachment=True)
 
-    # GET request: Render the form.
+        # Save the PDF to a unique file in the static/invoices folder.
+        filename = f"invoice_{uuid.uuid4().hex}.pdf"
+        filepath = os.path.join(invoices_dir, filename)
+        with open(filepath, "wb") as f:
+            f.write(pdf_bytes)
+
+        # Construct the public URL to the PDF (must be accessible by Twilio)
+        public_url = f"{PUBLIC_URL_BASE}/static/invoices/{filename}"
+
+        # Send WhatsApp message with the invoice via Twilio
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            from_=TWILIO_WHATSAPP_FROM,
+            body="Your laundry invoice is ready. Please check the attached invoice.",
+            to=TO_WHATSAPP_NUMBER,
+            media_url=[public_url]
+        )
+
+        flash("Invoice generated and sent via WhatsApp!", "success")
+        return redirect(url_for('index'))
+
     return render_template('index.html', items=items, service_options=service_options)
 
 if __name__ == '__main__':
