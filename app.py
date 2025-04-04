@@ -8,23 +8,20 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 from twilio.rest import Client
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = Flask(__name__)
-# Set secret key from environment variable or fallback
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")  # required for flash messages
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
 
 # --- Twilio Configuration (using environment variables) ---
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "+14155238886")  # default to Twilio sandbox number if not provided
-TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER", "+96599965133")       # your number (in international format)
-
-print("DEBUG: TWILIO_ACCOUNT_SID =", TWILIO_ACCOUNT_SID)
-print("DEBUG: TWILIO_AUTH_TOKEN =", TWILIO_AUTH_TOKEN)
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
+TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER", "whatsapp:+96599965133")
 
 # PUBLIC_URL_BASE must be the publicly accessible base URL for your app.
-PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE", "https://invoice-app-78jh.onrender.com")  # update this with your actual domain
+PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE", "https://invoice-app-78jh.onrender.com")
 
 # Ensure invoices directory exists under the static folder.
 invoices_dir = os.path.join("static", "invoices")
@@ -144,5 +141,3 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
