@@ -27,6 +27,11 @@
       <div class="invoice-form">
         <h1 class="mb-4">Laundry Invoice</h1>
         <form method="POST">
+          <!-- New input for WhatsApp recipient number -->
+          <div class="mb-3">
+            <label for="recipient" class="form-label">WhatsApp Recipient Number (e.g. +96512345678)</label>
+            <input type="text" class="form-control" name="recipient_number" id="recipient" placeholder="+96512345678">
+          </div>
           <table class="table table-bordered table-striped">
             <thead class="table-dark">
               <tr>
