@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+print("DEBUGGG")
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
 
@@ -18,10 +20,11 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
-TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER", "whatsapp:+96599965133")
+# Default recipient if user input is missing
+DEFAULT_TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER", "whatsapp:+96599965133")
 
 # PUBLIC_URL_BASE must be the publicly accessible base URL for your app.
-PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE", "https://invoice-app-78jh.onrender.com")
+PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE", "https://your-app-domain.com")
 
 # Ensure invoices directory exists under the static folder.
 invoices_dir = os.path.join("static", "invoices")
@@ -78,7 +81,7 @@ def index():
     if request.method == 'POST':
         order = {}
         total = 0
-        # Process form data
+        # Process form data for invoice items
         for item_label, base_price in items.items():
             quantity = int(request.form.get(f'{item_label}_quantity', 0))
             comment = request.form.get(f'{item_label}_comment', '')
@@ -125,12 +128,22 @@ def index():
         # Construct the public URL to the PDF (must be accessible by Twilio)
         public_url = f"{PUBLIC_URL_BASE}/static/invoices/{filename}"
 
+        # Get recipient WhatsApp number from form input
+        recipient_number = request.form.get("recipient_number", "").strip()
+        print("DEBUG: recipient_number =", repr(recipient_number))  # Debug line
+
+        if not recipient_number:
+            recipient_number = DEFAULT_TO_WHATSAPP_NUMBER
+        # Ensure the number is prefixed with "whatsapp:"
+        if not recipient_number.startswith("whatsapp:"):
+            recipient_number = "whatsapp:" + recipient_number
+
         # Send WhatsApp message with the invoice via Twilio
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         message = client.messages.create(
             from_=TWILIO_WHATSAPP_FROM,
             body="Your laundry invoice is ready. Please check the attached invoice.",
-            to=TO_WHATSAPP_NUMBER,
+            to=recipient_number,
             media_url=[public_url]
         )
 

@@ -42,6 +42,8 @@ def shape_arabic_in_parentheses(label):
         return f"({shaped})"
     return re.sub(pattern, replace_arabic, label)
 
+print("DEBUGGGG")
+
 # --- Items and Service Options ---
 items = {
     "Dish Wool (شماغ صوف)": 0.25,
@@ -128,6 +130,8 @@ def index():
 
         # Get recipient WhatsApp number from form input
         recipient_number = request.form.get("recipient_number", "").strip()
+        print("DEBUG: recipient_number =", repr(recipient_number))
+
         if not recipient_number:
             recipient_number = DEFAULT_TO_WHATSAPP_NUMBER
         # Ensure the number is prefixed with "whatsapp:"
