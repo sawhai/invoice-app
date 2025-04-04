@@ -7,18 +7,24 @@ from fpdf import FPDF
 import arabic_reshaper
 from bidi.algorithm import get_display
 from twilio.rest import Client
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = '2BNTHT4AE8J8T4ZXUCKLWRNQ'  # required for flash messages
+# Set secret key from environment variable or fallback
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")  # required for flash messages
 
-# --- Twilio Configuration ---
-TWILIO_ACCOUNT_SID = "ACb1b0a5619dbb2a7905d111187b5a6805"          # update this
-TWILIO_AUTH_TOKEN = "194718afc9d3ccb7caf3fff9755b9aa0"            # update this
-TWILIO_WHATSAPP_FROM = "+14155238886"     # your Twilio WhatsApp sender (sandbox)
-TO_WHATSAPP_NUMBER = "+96599965133"       # your number (in international format)
+# --- Twilio Configuration (using environment variables) ---
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "+14155238886")  # default to Twilio sandbox number if not provided
+TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER", "+96599965133")       # your number (in international format)
+
+print("DEBUG: TWILIO_ACCOUNT_SID =", TWILIO_ACCOUNT_SID)
+print("DEBUG: TWILIO_AUTH_TOKEN =", TWILIO_AUTH_TOKEN)
 
 # PUBLIC_URL_BASE must be the publicly accessible base URL for your app.
-PUBLIC_URL_BASE = "https://invoice-app-78jh.onrender.com"          # update this with your actual domain
+PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE", "https://invoice-app-78jh.onrender.com")  # update this with your actual domain
 
 # Ensure invoices directory exists under the static folder.
 invoices_dir = os.path.join("static", "invoices")
@@ -40,28 +46,28 @@ def shape_arabic_in_parentheses(label):
 
 # --- Items and Service Options ---
 items = {
-    "Dish Wool (شماغ صوف)": 10.0,
-    "Dishd C (ثوب قطن)": 10.0,
-    "Gotra Red/White (شماغ)": 8.0,
-    "Cap (طاقية)": 5.0,
-    "Pajama (بيجامة)": 7.0,
-    "Vest (سديري)": 5.0,
-    "Underwear (ملابس داخلية)": 3.0,
-    "Army Suit (بدلة عسكرية)": 12.0,
-    "Shirt (قميص)": 5.0,
-    "Trousers (بنطلون)": 6.0,
-    "Jackets (جاكيت)": 8.0,
-    "Large Coat (بالطو)": 12.0,
-    "Ladies Dress (فستان حريمي)": 10.0,
-    "Abaya (عباية)": 10.0,
-    "Hezab (حجاب)": 3.0,
-    "Skirt (تنورة)": 5.0,
-    "Blouse (بلوزة)": 5.0,
-    "Bath Towel (منشفة حمام)": 4.0,
-    "Blanket/Dibaz (بطانية / دثار)": 15.0,
-    "Bed Sheet (شرشف سرير)": 8.0,
-    "Pillow Case (كيس مخدة)": 3.0,
-    "Curtain (ستارة)": 15.0
+    "Dish Wool (شماغ صوف)": 0.25,
+    "Dishd C (ثوب قطن)": 0.25,
+    "Gotra Red/White (شماغ)": 0.25,
+    "Cap (طاقية)": 0.15,
+    "Pajama (بيجامة)": 0.5,
+    "Vest (سديري)": 0.75,
+    "Underwear (ملابس داخلية)": 0.25,
+    "Army Suit (بدلة عسكرية)": 1.5,
+    "Shirt (قميص)": 1.0,
+    "Trousers (بنطلون)": 1.0,
+    "Jackets (جاكيت)": 1.25,
+    "Large Coat (بالطو)": 2.5,
+    "Ladies Dress (فستان حريمي)": 2.0,
+    "Abaya (عباية)": 1.75,
+    "Hezab (حجاب)": 0.5,
+    "Skirt (تنورة)": 0.75,
+    "Blouse (بلوزة)": 0.5,
+    "Bath Towel (منشفة حمام)": 0.5,
+    "Blanket/Dibaz (بطانية / دثار)": 3.5,
+    "Bed Sheet (شرشف سرير)": 2.5,
+    "Pillow Case (كيس مخدة)": 0.5,
+    "Curtain (ستارة)": 4.0
 }
 
 service_options = {
@@ -138,3 +144,5 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
