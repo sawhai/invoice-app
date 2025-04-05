@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-print("DEBUGGG")
+#print("DEBUGGG")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
@@ -103,20 +103,50 @@ def index():
         # Create PDF invoice using fpdf2
         pdf = FPDF()
         pdf.add_page()
+        # Use an Arabic-capable font (make sure Amiri-Regular.ttf is in your project folder)
         pdf.add_font(fname="Amiri-Regular.ttf", family="Amiri", uni=True)
-        pdf.set_font("Amiri", size=14)
-        pdf.cell(0, 10, txt="Laundry Invoice", ln=True, align='C')
-        pdf.ln(10)
+        
+        # Title
+        pdf.set_font("Amiri", size=16)
+        pdf.set_text_color(0, 0, 128)  # Dark blue
+        pdf.cell(0, 15, txt="Laundry Invoice", ln=True, align='C')
+        pdf.ln(5)
+        
+        # Reset font and text color for table
+        pdf.set_font("Amiri", size=12)
+        pdf.set_text_color(0, 0, 0)
+        
+        # Define table headers and column widths
+        header = ["Item", "Quantity", "Service", "Comment"]
+        col_widths = [80, 20, 40, 50]  # Sum should be ~190 for A4 page (210-20 margins)
+        
+        # Set a fill color for the header row (light blue)
+        pdf.set_fill_color(200, 220, 255)
+        pdf.set_text_color(0, 0, 0)
+        
+        # Print the header row
+        for i, col in enumerate(header):
+            pdf.cell(col_widths[i], 10, col, border=1, align='C', fill=True)
+        pdf.ln()
+        
+        # Print each row for ordered items
         for label, details in order.items():
-            shaped_label = shape_arabic_in_parentheses(label)
-            line = (
-                f"{shaped_label}: {details['quantity']} x {details['final_price']:.2f} "
-                f"= {details['subtotal']:.2f} "
-                f"(Service: {details['service']}, Comment: {details['comment']})"
-            )
-            pdf.multi_cell(0, 10, txt=line)
-            pdf.ln(2)
-        pdf.cell(0, 10, txt=f"Total: {total:.2f}", ln=True)
+            # Format the item name (with Arabic shaping for the Arabic part)
+            item_display = shape_arabic_in_parentheses(label)
+            
+            pdf.cell(col_widths[0], 10, item_display, border=1)
+            pdf.cell(col_widths[1], 10, str(details['quantity']), border=1, align='C')
+            service_str = details['service'].replace('_', ' ').capitalize()
+            pdf.cell(col_widths[2], 10, service_str, border=1, align='C')
+            pdf.cell(col_widths[3], 10, details['comment'], border=1)
+            pdf.ln()
+        
+        # Add a gap and then the total
+        pdf.ln(5)
+        pdf.set_font("Amiri", size=14)
+        pdf.cell(0, 10, txt=f"Total: {total:.2f}", ln=True, align='R')
+        
+        # Output the PDF to a bytes object
         pdf_bytes = pdf.output(dest="S")
 
         # Save the PDF to a unique file in the static/invoices folder.
@@ -130,7 +160,7 @@ def index():
 
         # Get recipient WhatsApp number from form input
         recipient_number = request.form.get("recipient_number", "").strip()
-        print("DEBUG: recipient_number =", repr(recipient_number))  # Debug line
+        #print("DEBUG: recipient_number =", repr(recipient_number))  # Debug line
 
         if not recipient_number:
             recipient_number = DEFAULT_TO_WHATSAPP_NUMBER
